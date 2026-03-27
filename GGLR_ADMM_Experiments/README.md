@@ -1,12 +1,12 @@
 # Graph-Guided Regularized Logistic Regression (GGLR) ADMM Experiments
 
-### 论文数值实验代码：mPG-ADMM 对比实验 
+### 论文数值实验代码：PKM-ADMM 对比实验 
 
-包含7种ADMM算法：标准ADMM、随机ADMM、SAG-ADMM、SAGA-ADMM、SVRG-ADMM、SPIDER-ADMM、mPG-ADMM 
+包含几种随机ADMM算法：随机ADMM、SAG-ADMM、SAGA-ADMM、SVRG-ADMM、SPIDER-ADMM、PKM-ADMM 
 
 ### 运行环境 
 
-Python 3.8+ 
+Python 3.10 
 
 安装依赖：pip install -r requirements.txt 
 
@@ -18,7 +18,7 @@ Python 3.8+
 
 1. 控制台打印所有算法收敛信息 
 
-2. Results/ 文件夹下自动保存3张对比曲线（fig格式）：   
+2. Results/ 文件夹下自动保存3张对比曲线（png格式）：   
 
 - 目标函数间隙收敛曲线   
 
