@@ -5,15 +5,15 @@ from scipy.special import expit  # 数值稳定的expit
 
 
 def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
-                mu = 1e-3, lam = 1e-2, rho = 1.0,
+                mu1 = 1e-3, mu2 = 1e-2, rho = 1.0,
                 step_size=0.01, batch_size=32, update_freq=100):
     """
     修正版 SPIDER-ADMM 求解 GGLR 问题（适配缩放过的对偶变量）
     :param A: 样本特征矩阵 (n_samples, n_features)
     :param b: 标签向量 (n_samples,)
     :param D: 图关联矩阵 (n_edges, n_features)
-    :param mu: L2正则化系数 (强凸参数)
-    :param lam: L1正则化系数 (图正则参数)
+    :param mu1: L2正则化系数 (强凸参数)
+    :param mu2: L1正则化系数 (图正则参数)
     :param rho: ADMM增广拉格朗日惩罚系数
     :param max_iter: 最大迭代次数
     :param step_size: x 块的梯度下降步长
@@ -44,7 +44,7 @@ def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
             # 全梯度更新（包含GGLR的L2正则项）
             z = b * (A @ x)
             coef = -b * expit(-z)
-            grad_full = (A.T @ coef) / n + mu * x
+            grad_full = (A.T @ coef) / n + mu1 * x
             spider_est = grad_full
         else:
             # 随机批次梯度差（SPIDER核心）
@@ -55,12 +55,12 @@ def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
             # 当前x批次梯度
             z_curr = b_batch * (A_batch @ x)
             coef_curr = -b_batch * expit(-z_curr)
-            grad_curr = (A_batch.T @ coef_curr) / batch_size + mu * x
+            grad_curr = (A_batch.T @ coef_curr) / batch_size + mu1 * x
 
             # 上一步x_prev批次梯度
             z_prev = b_batch * (A_batch @ x_prev)
             coef_prev = -b_batch * expit(-z_prev)
-            grad_prev = (A_batch.T @ coef_prev) / batch_size + mu * x_prev
+            grad_prev = (A_batch.T @ coef_prev) / batch_size + mu1 * x_prev
 
             # SPIDER梯度更新公式
             spider_est = grad_curr - grad_prev + spider_est
@@ -74,7 +74,7 @@ def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
         # -------------------- 步骤1：y子问题更新（软阈值闭解） --------------------
         # 缩放对偶变量下，y的正确软阈值公式
         u = D @ x + lam_u
-        y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0.0)
+        y = np.sign(u) * np.maximum(np.abs(u) - mu2 / rho, 0.0)
 
 
         # -------------------- 步骤2：x子问题更新（梯度下降） --------------------
@@ -89,7 +89,7 @@ def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
         # ==========================================================
         # 3. 收敛指标记录
         # ==========================================================
-        gap = objective_gap(x, y, D, A, b, mu, lam, p_star)
+        gap = objective_gap(x, y, D, A, b, mu1, mu2, p_star)
         pr = primal_residual(D, x, y)
         dr = dual_residual(lam_u_prev, lam_u, rho, D)
 

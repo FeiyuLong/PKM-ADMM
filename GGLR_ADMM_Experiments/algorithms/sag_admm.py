@@ -4,15 +4,15 @@ from utils.metrics import *
 from scipy.special import expit  # 导入数值稳定的expit
 
 def sag_admm(A, b, D, max_iter=1000, p_star=0.0,
-             mu = 1e-3, lam = 1e-2, rho = 1.0,
+             mu1 = 1e-3, mu2 = 1e-2, rho = 1.0,
              step_size=0.01, batch_size=32):  # 新增batch_size参数，默认32
     """
     SAG-ADMM求解GGLR问题，添加步长和batch_size参数
     :param A: 样本特征矩阵 (n_samples, n_features)
     :param b: 标签向量 (n_samples,)
     :param D: 图关联矩阵 (n_edges, n_features)
-    :param mu: L2正则化系数
-    :param lam: L1正则化系数
+    :param mu1: L2正则化系数
+    :param mu2: L1正则化系数
     :param rho: ADMM惩罚系数
     :param max_iter: 最大迭代次数
     :param step_size: 梯度下降步长
@@ -63,10 +63,10 @@ def sag_admm(A, b, D, max_iter=1000, p_star=0.0,
 
         # y更新：软阈值操作
         u = D @ x + lam_u
-        y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
+        y = np.sign(u) * np.maximum(np.abs(u) - mu2 / rho, 0)
 
         # x更新：SAG梯度下降（添加步长参数）
-        sag_est = avg_grad + mu * x
+        sag_est = avg_grad + mu1 * x
         x = x - step_size * (sag_est + rho * D.T @ (D @ x - y + lam_u))
 
         # 对偶变量更新
@@ -74,7 +74,7 @@ def sag_admm(A, b, D, max_iter=1000, p_star=0.0,
         lam_u = lam_u + D @ x - y
 
         # 记录指标：使用传入的真实p_star
-        gap = objective_gap(x, y, D, A, b, mu, lam, p_star)
+        gap = objective_gap(x, y, D, A, b, mu1, mu2, p_star)
         pr = primal_residual(D, x, y)
         dr = dual_residual(lam_u_prev, lam_u, rho, D)
 

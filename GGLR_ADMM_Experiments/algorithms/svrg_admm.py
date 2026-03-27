@@ -4,19 +4,19 @@ from utils.metrics import objective_gap, primal_residual, dual_residual
 from scipy.special import expit  # 导入expit避免数值溢出
 
 def svrg_admm(A, b, D, max_iter=500, p_star=0.0,
-              mu=1e-1, lam=1e-2, rho=0.01,
+              mu1=1e-1, mu2=1e-2, rho=0.01,
               step_size=0.01, batch_size=32, update_freq=10):  # 新增batch_size参数，默认32
     """
     SVRG-ADMM 求解图诱导正则化逻辑回归 (GGLR) 问题
-    目标函数：L(x) + (mu/2)||x||² + λ||Dx||₁，其中 L(x) 是逻辑回归损失
+    目标函数：L(x) + (mu1/2)||x||² + λ||Dx||₁，其中 L(x) 是逻辑回归损失
     ADMM 拆分：z = Dx，增广拉格朗日函数结合 SVRG 方差缩减梯度更新
 
     参数：
         A: 特征矩阵 (n_samples, n_features)
         b: 标签向量 (n_samples,)
         D: 图关联矩阵 (n_edges, n_features)
-        mu: L2 正则化系数
-        lam: L1 正则化系数 (图引导)
+        mu1: L2 正则化系数
+        mu2: L1 正则化系数 (图引导)
         rho: ADMM 惩罚参数
         update_freq: SVRG 全梯度快照更新频率
         max_iter: 最大迭代次数
@@ -54,9 +54,9 @@ def svrg_admm(A, b, D, max_iter=500, p_star=0.0,
         A_batch, b_batch = A[indices], b[indices]
 
         # ========== ADMM y (z) 变量更新 (软阈值) ==========
-        # 软阈值公式：y = soft_threshold(Dx + lam_u/rho, lam/rho)
+        # 软阈值公式：y = soft_threshold(Dx + lam_u/rho, mu2/rho)
         u = D @ x + lam_u / rho
-        y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
+        y = np.sign(u) * np.maximum(np.abs(u) - mu2 / rho, 0)
 
         # ========== SVRG 随机梯度方差缩减 ==========
         # 随机采样batch_size个样本
@@ -72,8 +72,8 @@ def svrg_admm(A, b, D, max_iter=500, p_star=0.0,
         svrg_est = grad - grad_snap + full_grad
 
         # ========== ADMM x 变量更新 (梯度下降) ==========
-        # 增广拉格朗日关于 x 的梯度：SVRG 梯度 + mu*x + rho*D^T(Dx - y + lam_u)
-        x_grad = svrg_est + mu * x + rho * D.T @ (D @ x - y + lam_u)
+        # 增广拉格朗日关于 x 的梯度：SVRG 梯度 + mu1*x + rho*D^T(Dx - y + lam_u)
+        x_grad = svrg_est + mu1 * x + rho * D.T @ (D @ x - y + lam_u)
         x = x - step_size * x_grad
 
         # ========== ADMM 对偶变量 lam_u 更新 ==========
@@ -82,7 +82,7 @@ def svrg_admm(A, b, D, max_iter=500, p_star=0.0,
         lam_u = lam_u + rho * (D @ x - y)
 
         # ========== 计算收敛指标 ==========
-        gap = objective_gap(x, y, D, A, b, mu, lam, p_star)
+        gap = objective_gap(x, y, D, A, b, mu1, mu2, p_star)
         pr = primal_residual(D, x, y)
         dr = dual_residual(lam_u_prev, lam_u, rho, D)
 

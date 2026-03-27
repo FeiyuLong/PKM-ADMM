@@ -18,50 +18,50 @@ from algorithms.pkm_admm import pkm_admm
 # 默认参数
 n_samples = 500 * 1
 n_features = 50 * 1
-mu = 1e-3
-lam = 1e-2
+mu1 = 1e-3
+mu2 = 1e-2
 rho = 1.0
 max_iter = 500
 step_size = 0.01
 
 # STOC-ADMM 参数
-stoc_mu = 1e-3              # 默认：1e-3
-stoc_lam = 1e-2             # 默认：1e-2
+stoc_mu1 = 1e-3              # 默认：1e-3
+stoc_mu2 = 1e-2             # 默认：1e-2
 stoc_rho = 0.5              # 默认：1.0
 stoc_step_size = 0.001       # 默认：0.01
 stoc_batch_size = 32        # 默认：32
 
 # SAG-ADMM 参数
-sag_mu = 1e-3               # 默认：1e-3
-sag_lam = 1e-2              # 默认：1e-2
+sag_mu1 = 1e-3               # 默认：1e-3
+sag_mu2 = 1e-2              # 默认：1e-2
 sag_rho = 1.0               # 默认：1.0
 sag_step_size = 0.01        # 默认：0.01
 sag_batch_size = 1              # SAG-ADMM批次大小，默认32
 
 # SAGA-ADMM 参数
-saga_mu = 1e-3              # 默认：1e-3
-saga_lam = 1e-2             # 默认：1e-2
+saga_mu1 = 1e-3              # 默认：1e-3
+saga_mu2 = 1e-2             # 默认：1e-2
 saga_rho = 1.0              # 默认：1.0
 saga_step_size = 0.01       # 默认：0.01
 saga_batch_size = 1             # SAGA-ADMM批次大小，默认32
 
 # SVRG-ADMM 参数
-svrg_mu = 1e-3              # 默认：1e-3
-svrg_lam = 1e-2             # 默认：1e-2
+svrg_mu1 = 1e-3              # 默认：1e-3
+svrg_mu2 = 1e-2             # 默认：1e-2
 svrg_rho = 1.0              # 默认：1.0
 svrg_step_size = 0.01       # 默认：0.01
 svrg_batch_size = 1             # SVRG-ADMM批次大小，默认32
 
 # SPIDER-ADMM 参数
-spider_mu = 1e-3            # 默认：1e-3
-spider_lam = 1e-2           # 默认：1e-2
+spider_mu1 = 1e-3            # 默认：1e-3
+spider_mu2 = 1e-2           # 默认：1e-2
 spider_rho = 1.0            # 默认：1.0
 spider_step_size = 0.02     # 默认：0.01
 spider_batch_size = 1          # SPIDER-ADMM批次大小，默认32
 
 # PKM-ADMM 参数
-pkm_mu = 1e-3               # 默认：1e-3
-pkm_lam = 1e-2              # 默认：1e-2
+pkm_mu1 = 1e-3               # 默认：1e-3
+pkm_mu2 = 1e-2              # 默认：1e-2
 pkm_rho = 1.0               # 默认：1.0
 pkm_step_size = 0.02        # 默认：0.01
 pkm_tau = 0.5               # 默认：0.5
@@ -78,7 +78,7 @@ A, b, x_true, z_true = generate_gglr_data(n_samples, n_features, D)
 # ===================== 计算真实最优值p_star =====================
 print("=== 开始用CVXPY(SCS)精确求解GGLR最优值p_star ===")
 try:
-    p_star = compute_gglr_optimal_value(A, b, D, mu, lam)
+    p_star = compute_gglr_optimal_value(A, b, D, mu1, mu2)
     print(f"=== CVXPY求解得到p_star = {p_star:.8f} ===")
 except RuntimeError as e:
     print(f"=== CVXPY求解失败：{e}，使用p_star=0.0替代 ===")
@@ -103,13 +103,14 @@ print(f"    按顺序依次比较算法："+tmp)
 # 1. STOC-ADMM
 res_stoc  = stochastic_admm(
     A, b, D, max_iter, p_star,
-    mu=stoc_mu, lam=stoc_lam, rho=stoc_rho, step_size=stoc_step_size, batch_size=stoc_batch_size
+    mu1=stoc_mu1, mu2=stoc_mu2, rho=stoc_rho, step_size=stoc_step_size, batch_size=stoc_batch_size
 )
 results.append(res_stoc)
 
 # 2. SAG-ADMM
 res_sag = sag_admm(
-    A, b, D, mu=saga_mu, lam=saga_lam, rho=saga_rho, max_iter=max_iter, step_size=saga_step_size, p_star=p_star, batch_size=sag_batch_size)
+    A, b, D, max_iter=max_iter, p_star=p_star,
+    mu1=saga_mu1, mu2=saga_mu2, rho=saga_rho, step_size=saga_step_size, batch_size=sag_batch_size)
 # print("SAG-ADMM gap 前10个值:", res_sag["gap"][:10])
 # print("    SAG-ADMM gap 是否有inf:", np.any(np.isinf(res_sag["gap"])))
 # print("    SAG-ADMM gap 是否有NaN:", np.any(np.isnan(res_sag["gap"])))
@@ -117,14 +118,14 @@ results.append(res_sag)
 
 res_saga = saga_admm(
     A, b, D, max_iter, p_star,
-    mu=saga_mu, lam=saga_lam, rho=saga_rho, step_size=sag_step_size
+    mu1=saga_mu1, mu2=saga_mu2, rho=saga_rho, step_size=sag_step_size
 )
 results.append(res_saga)
 
 # 3. SVRG-ADMM
 res_svrg = svrg_admm(
     A, b, D, max_iter, p_star,
-    mu=svrg_mu, lam=svrg_lam, rho=svrg_rho, step_size=svrg_step_size, batch_size=svrg_batch_size)
+    mu1=svrg_mu1, mu2=svrg_mu2, rho=svrg_rho, step_size=svrg_step_size, batch_size=svrg_batch_size)
 # print("SVRG-ADMM gap 前10个值:", res_svrg["gap"][:10])
 # print("    SVRG-ADMM gap 是否有inf:", np.any(np.isinf(res_svrg["gap"])))
 # print("    SVRG-ADMM gap 是否有NaN:", np.any(np.isnan(res_svrg["gap"])))
@@ -132,7 +133,8 @@ results.append(res_svrg)
 
 # 4. SPIDER-ADMM
 res_spider = spider_admm(
-    A, b, D, mu=spider_mu, lam=spider_lam, rho=spider_rho, max_iter=max_iter, step_size=spider_step_size, p_star=p_star, batch_size=spider_batch_size)
+    A, b, D, max_iter=max_iter, p_star=p_star,
+    mu1=spider_mu1, mu2=spider_mu2, rho=spider_rho, step_size=spider_step_size, batch_size=spider_batch_size)
 # print("SPIDER-ADMM gap 前10个值:", res_spider["gap"][:10])
 # print("    SPIDER-ADMM gap 是否有inf:", np.any(np.isinf(res_spider["gap"])))
 # print("    SPIDER-ADMM gap 是否有NaN:", np.any(np.isnan(res_spider["gap"])))
@@ -141,8 +143,8 @@ results.append(res_spider)
 # 5. PKM-ADMM
 res_pkm = pkm_admm(
     A, b, D,
-    mu=pkm_mu,
-    lam=pkm_lam,
+    mu1=pkm_mu1,
+    mu2=pkm_mu2,
     rho=pkm_rho,
     max_iter=max_iter,
     step_size=pkm_step_size,

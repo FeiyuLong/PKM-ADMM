@@ -3,20 +3,20 @@ import time
 from utils.metrics import objective_gap, primal_residual, dual_residual
 
 def pkm_admm(A, b, D, max_iter=1000, p_star=0.0,
-             mu = 1e-3, lam = 1e-2, rho = 1.0,
+             mu1 = 1e-3, mu2 = 1e-2, rho = 1.0,
              step_size=0.01, batch_size=32,
              tau=0.5, varrho=0.3, update_prob_p_t=0.1):
     """
     mPG-ADMM求解图诱导正则化逻辑回归 (GGLR) 问题
-    目标函数：L(x) + (mu/2)||x||² + λ||y||₁ s.t. Dx - y = 0
+    目标函数：L(x) + (mu1/2)||x||² + λ||y||₁ s.t. Dx - y = 0
     其中 L(x) = (1/n)∑log(1+exp(-b_i a_i^T x)) 是逻辑回归损失
 
     参数：
         A: 特征矩阵 (n_samples, n_features)
         b: 标签向量 (n_samples,)
         D: 图关联矩阵 (n_edges, n_features)
-        mu: L2 正则化系数
-        lam: L1 正则化系数 (图引导)
+        mu1: L2 正则化系数
+        mu2: L1 正则化系数 (图引导)
         rho: ADMM 惩罚参数
         max_iter: 最大迭代次数
         step_size: 步长η（对应z-update闭式解中的1/η）
@@ -40,11 +40,11 @@ def pkm_admm(A, b, D, max_iter=1000, p_star=0.0,
 
     # 定义梯度计算函数
     def full_gradient(x):
-        """计算全梯度 ∇f(x) = (1/n)A^T(-b/(1+exp(b*A@x))) + mu*x"""
+        """计算全梯度 ∇f(x) = (1/n)A^T(-b/(1+exp(b*A@x))) + mu1*x"""
         logit = A @ x
         sigmoid = 1 / (1 + np.exp(b * logit))
         grad_logreg = (1 / n) * A.T @ (-b * sigmoid)
-        return grad_logreg + mu * x
+        return grad_logreg + mu1 * x
 
     def sample_gradient(x, j):
         """计算单个样本j的梯度 ∇f_j(x) = -b[j]*A[j]/(1+exp(b[j]*A[j]@x))"""
@@ -63,7 +63,7 @@ def pkm_admm(A, b, D, max_iter=1000, p_star=0.0,
     for t in range(max_iter):
         # ========== Step 1: y更新（软阈值操作） ==========
         u = D @ z + lam_u  # A=D, B=-I, c=0 → D z_t - y + λ_t = u - y
-        y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
+        y = np.sign(u) * np.maximum(np.abs(u) - mu2 / rho, 0)
 
         # ========== Step 2: x更新 ==========
         tau_t = tau  # 简化为固定τ_t，可按需调整为动态值
@@ -79,7 +79,7 @@ def pkm_admm(A, b, D, max_iter=1000, p_star=0.0,
             grad_j_w = sample_gradient(w, j)
             sum_grad_diff += (grad_j_x - grad_j_w)
         v_t_1 = (1 / batch_size) * sum_grad_diff + grad_f_w
-        v_t_1 += mu * x_new  # 补充L2正则项的梯度贡献
+        v_t_1 += mu1 * x_new  # 补充L2正则项的梯度贡献
 
         # ========== Step 5: z更新（闭式解） ==========
         # 预分解矩阵 (1/η)I + ρD^TD（处理非正定情况）
@@ -116,7 +116,7 @@ def pkm_admm(A, b, D, max_iter=1000, p_star=0.0,
         w = w_new
 
         # ========== 计算收敛指标 ==========
-        gap = objective_gap(z, y, D, A, b, mu, lam, p_star)
+        gap = objective_gap(z, y, D, A, b, mu1, mu2, p_star)
         pr = primal_residual(D, z, y)
         dr = dual_residual(lam_u_prev, lam_u, rho, D)
 
