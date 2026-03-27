@@ -45,7 +45,6 @@ def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
             z = b * (A @ x)
             coef = -b * expit(-z)
             grad_full = (A.T @ coef) / n + mu * x
-            # v = grad_full
             spider_est = grad_full
         else:
             # 随机批次梯度差（SPIDER核心）
@@ -83,12 +82,12 @@ def spider_admm(A, b, D, max_iter=1000, p_star = 0.0,
         x -= step_size * (spider_est + rho * D.T @ (D @ x - y + lam_u))
 
 
-        # -------------------- 步骤3：缩放对偶变量更新（核心要求） --------------------
+        # -------------------- 步骤3：缩放对偶变量更新 --------------------
         lam_u_prev = lam_u.copy()
         lam_u = lam_u + D @ x - y
 
         # ==========================================================
-        # 3. 收敛指标记录（与原代码完全一致）
+        # 3. 收敛指标记录
         # ==========================================================
         gap = objective_gap(x, y, D, A, b, mu, lam, p_star)
         pr = primal_residual(D, x, y)

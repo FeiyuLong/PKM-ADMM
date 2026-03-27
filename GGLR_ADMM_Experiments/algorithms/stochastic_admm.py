@@ -58,9 +58,9 @@ def stochastic_admm(A, b, D, max_iter=1000, p_star=0.0,
         # 步骤3：计算梯度
         batch_grad = A_batch.T @ (-b_batch * term)
         unbiased_grad = (n / batch_size) * batch_grad  # 无偏缩放
-        stoc_grad_est = unbiased_grad + mu * x  # 加上L2正则项梯度
+        sgd_est = unbiased_grad + mu * x  # 加上L2正则项梯度
 
-        x = x - step_size * (stoc_grad_est + rho * D.T @ (D @ x - y + lam_u))
+        x = x - step_size * (sgd_est + rho * D.T @ (D @ x - y + lam_u))
 
         # 对偶变量更新
         lam_u_prev = lam_u.copy()

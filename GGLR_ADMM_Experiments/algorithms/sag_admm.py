@@ -66,8 +66,8 @@ def sag_admm(A, b, D, max_iter=1000, p_star=0.0,
         y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
 
         # x更新：SAG梯度下降（添加步长参数）
-        sag_grad_est = avg_grad + mu * x
-        x = x - step_size * (sag_grad_est + rho * D.T @ (D @ x - y + lam_u))
+        sag_est = avg_grad + mu * x
+        x = x - step_size * (sag_est + rho * D.T @ (D @ x - y + lam_u))
 
         # 对偶变量更新
         lam_u_prev = lam_u.copy()

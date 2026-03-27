@@ -69,11 +69,11 @@ def svrg_admm(A, b, D, max_iter=500, p_star=0.0,
         z_snap = b[idx] * (A_batch @ x_snapshot)  # (batch_size,)
         grad_snap = np.mean(-b_batch[:, None] * A_batch * expit(-z_snap[:, None]), axis=0)  # (d,)
         # SVRG 方差缩减后的梯度 (核心)
-        svrg_grad_est = grad - grad_snap + full_grad
+        svrg_est = grad - grad_snap + full_grad
 
         # ========== ADMM x 变量更新 (梯度下降) ==========
         # 增广拉格朗日关于 x 的梯度：SVRG 梯度 + mu*x + rho*D^T(Dx - y + lam_u)
-        x_grad = svrg_grad_est + mu * x + rho * D.T @ (D @ x - y + lam_u)
+        x_grad = svrg_est + mu * x + rho * D.T @ (D @ x - y + lam_u)
         x = x - step_size * x_grad
 
         # ========== ADMM 对偶变量 lam_u 更新 ==========
