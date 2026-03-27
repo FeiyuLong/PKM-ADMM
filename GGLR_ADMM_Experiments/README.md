@@ -4,6 +4,19 @@
 
 包含几种随机ADMM算法：随机ADMM、SAG-ADMM、SAGA-ADMM、SVRG-ADMM、SPIDER-ADMM、PKM-ADMM 
 
+### 问题
+
+求解图诱导正则化逻辑回归 (GGLR) 问题
+
+```
+目标函数：
+min_{x,y} L(x) + (mu/2)||x||² + λ||y||₁ 
+s.t. Dx - y = 0
+其中 L(x) = (1/n)∑log(1+exp(-b_i a_i^T x)) 是逻辑回归损失
+```
+
+
+
 ### 运行环境 
 
 Python 3.10 

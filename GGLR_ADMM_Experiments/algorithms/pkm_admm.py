@@ -2,8 +2,10 @@ import numpy as np
 import time
 from utils.metrics import objective_gap, primal_residual, dual_residual
 
-def pkm_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01,
-             tau=0.5, varrho=0.3, update_prob_p_t=0.1, batch_size_b=32, p_star=0.0):
+def pkm_admm(A, b, D, max_iter=1000, p_star=0.0,
+             mu = 1e-3, lam = 1e-2, rho = 1.0,
+             step_size=0.01, batch_size=32,
+             tau=0.5, varrho=0.3, update_prob_p_t=0.1):
     """
     mPG-ADMM求解图诱导正则化逻辑回归 (GGLR) 问题
     目标函数：L(x) + (mu/2)||x||² + λ||y||₁ s.t. Dx - y = 0
@@ -21,7 +23,7 @@ def pkm_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01,
         tau: mPG-ADMM的τ参数（x更新的权重）
         varrho: mPG-ADMM的varrho参数（x更新的权重）
         update_prob_p_t: w更新的概率p_t
-        batch_size_b: 随机批次大小b（对应算法中的J_t大小）
+        batch_size: 随机批次大小b（对应算法中的J_t大小）
     返回：
         收敛指标（目标间隙、原始残差、对偶残差）
     """
@@ -68,7 +70,7 @@ def pkm_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01,
         x_new = tau_t * z + varrho * w + (1 - tau_t - varrho) * q
 
         # ========== Step 3: 采样mini-batch J_t ==========
-        J_t = np.random.choice(n, batch_size_b, replace=False)
+        J_t = np.random.choice(n, batch_size, replace=False)
 
         # ========== Step 4: 计算方差缩减梯度v_{t+1} ==========
         sum_grad_diff = np.zeros(d)
@@ -76,7 +78,7 @@ def pkm_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01,
             grad_j_x = sample_gradient(x_new, j)
             grad_j_w = sample_gradient(w, j)
             sum_grad_diff += (grad_j_x - grad_j_w)
-        v_t_1 = (1 / batch_size_b) * sum_grad_diff + grad_f_w
+        v_t_1 = (1 / batch_size) * sum_grad_diff + grad_f_w
         v_t_1 += mu * x_new  # 补充L2正则项的梯度贡献
 
         # ========== Step 5: z更新（闭式解） ==========

@@ -3,7 +3,9 @@ import time
 from utils.metrics import *
 from scipy.special import expit
 
-def saga_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01, p_star=0.0, batch_size=32):  # 新增batch_size参数，默认32
+def saga_admm(A, b, D, max_iter=1000, p_star=0.0,
+              mu = 1e-3, lam = 1e-2, rho = 1.0,
+              step_size=0.01, batch_size=32):  # 新增batch_size参数，默认32
     """
     SAGA-ADMM求解GGLR问题，添加步长和batch_size参数
     :param A: 样本特征矩阵 (n_samples, n_features)
@@ -26,38 +28,40 @@ def saga_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01, p_star=0.0, 
     grad_table = np.zeros((n, d))  # 存储每个样本的历史梯度
     # 初始全梯度（向量操作）
     z_full = b[:, None] * A @ x  # (n, 1)
-    avg_grad = np.mean(-b[:, None] * A * expit(-z_full), axis=0)  # (d,)
+    # avg_grad = np.mean(-b[:, None] * A * expit(-z_full), axis=0)  # (d,)
+    expit_z = expit(-z_full).reshape(-1, 1)  # 果z_full是样本维度 (500,) → 重塑为 (500, 1)
+    avg_grad = np.mean(-b[:, None] * A * expit_z, axis=0)  # (d,)
     gaps, primals, duals = [], [], []
     time_list = []
     start_time = time.time()
 
     for k in range(max_iter):
         # 随机采样batch_size个样本
-        idx = np.random.choice(n, size=batch_size, replace=False)
+        indices = np.random.choice(n, size=batch_size, replace=False)
 
         # 批量计算当前梯度，向量操作
-        z = b[idx] * (A[idx] @ x)  # (batch_size,)
-        current_grad_batch = -b[idx, None] * A[idx] * expit(-z[:, None])  # (batch_size, d)
+        z = b[indices] * (A[indices] @ x)  # (batch_size,)
+        current_grad_batch = -b[indices, None] * A[indices] * expit(-z[:, None])  # (batch_size, d)
         current_grad_mean = np.mean(current_grad_batch, axis=0)  # (d,)
 
         # SAGA方差缩减梯度计算
-        saga_grad_batch = current_grad_batch - grad_table[idx] + avg_grad[None, :]  # (batch_size, d)
+        saga_grad_batch = current_grad_batch - grad_table[indices] + avg_grad[None, :]  # (batch_size, d)
         saga_grad_mean = np.mean(saga_grad_batch, axis=0)  # (d,)
 
         # 更新梯度表和平均梯度
-        for idx in idx:
+        for i, idx in enumerate(indices):
             grad_old = grad_table[idx].copy()
-            grad_new = current_grad_batch[np.where(idx == idx)[0][0]]
+            grad_new = current_grad_batch[i]  # 直接用batch位置索引，正确对应样本
             grad_table[idx] = grad_new
-            avg_grad = avg_grad - (grad_old - grad_new)/n
+            avg_grad = avg_grad - (grad_old - grad_new) / n  # 数学公式与原代码完全一致
 
         # y更新：软阈值操作
         u = D @ x + lam_u
         y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
 
         # x更新：SAGA梯度下降
-        full_grad_est = saga_grad_mean + mu * x
-        x = x - step_size * (full_grad_est + rho * D.T @ (D @ x - y))
+        saga_grad_est = saga_grad_mean + mu * x
+        x = x - step_size * (saga_grad_est + rho * D.T @ (D @ x - y + lam_u))
 
         # 对偶变量更新
         lam_u_prev = lam_u.copy()

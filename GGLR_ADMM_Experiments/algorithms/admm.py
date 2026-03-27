@@ -3,7 +3,9 @@ import time
 from scipy.linalg import cholesky, solve_triangular
 from utils.metrics import *
 
-def standard_admm(A, b, D, mu, lam, rho, max_iter=1000, step_size=0.01, p_star=0.0):  # 新增p_star参数
+def standard_admm(A, b, D, max_iter=1000, p_star=0.0,
+                  mu = 1e-3, lam = 1e-2, rho = 1.0,
+                  step_size=0.01):
     """
     标准ADMM求解GGLR问题
     :param A: 样本特征矩阵 (n_samples, n_features)

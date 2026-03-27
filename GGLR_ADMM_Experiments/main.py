@@ -4,7 +4,7 @@ from utils.data_generator import generate_graph_incidence_matrix, generate_gglr_
 from utils.plot_utils import plot_convergence_curves_by_time, plot_convergence_curves_by_epoch
 from utils.optimizer import compute_gglr_optimal_value
 
-# 导入所有7个算法
+# 导入算法
 from algorithms.admm import standard_admm
 from algorithms.stochastic_admm import stochastic_admm
 from algorithms.sag_admm import sag_admm
@@ -89,33 +89,9 @@ print("=== 开始运行算法 ===")
 
 results = []
 
-# ==== 所有算法 ========
-# ====# algo_names = [
-#     "ADMM", "Stochastic ADMM", "SAG-ADMM", "SAGA-ADMM",
-#     "SVRG-ADMM", "SPIDER-ADMM", "PKM-ADMM"
-# ]
-
-# results.append(standard_admm(A, b, D, mu, lam, rho, max_iter=max_iter, step_size=step_size, p_star=p_star))
-# results.append(stochastic_admm(A, b, D, mu, lam, rho, max_iter=max_iter, step_size=step_size, p_star=p_star))
-# results.append(sag_admm(A, b, D, mu, lam, rho, max_iter=max_iter, step_size=step_size, p_star=p_star))
-# results.append(saga_admm(A, b, D, mu, lam, rho, max_iter=max_iter, step_size=step_size, p_star=p_star))
-# results.append(svrg_admm(A, b, D, mu, lam, rho, max_iter=max_iter, step_size=0.005, p_star=p_star))
-# results.append(spider_admm(A, b, D, mu, lam, rho, max_iter=max_iter, step_size=step_size, p_star=p_star))
-# results.append(pkm_admm(
-#     A, b, D, mu, lam, rho,
-#     max_iter=max_iter,
-#     step_size=step_size,
-#     tau=pkm_tau,
-#     varrho=pkm_varrho,
-#     update_prob_p_t=pkm_update_prob,
-#     batch_size_b=pkm_batch_size,
-#     p_star=p_star  # 传入p_star
-# ))
-
-
-# ======== 只比较需要的算法 ========
+# ======== 比较算法 ========
 algo_names = [
-    "STOC-ADMM", "SAGA-ADMM",
+    "STOC-ADMM", "SAG-ADMM","SAGA-ADMM",
     "SVRG-ADMM", "SPIDER-ADMM", "PKM-ADMM"
 ]
 
@@ -125,11 +101,10 @@ print(f"    按顺序依次比较算法："+tmp)
 # 运行算法并检查gap值
 
 # 1. STOC-ADMM
-res_stoc = stochastic_admm(
-    A, b, D, mu=stoc_mu, lam=stoc_lam, rho=stoc_rho, max_iter=max_iter, step_size=stoc_step_size, p_star=p_star, batch_size=stoc_batch_size)
-# print("STOC-ADMM gap 前10个值:", res_stoc["gap"][:10])
-# print("    STOC-ADMM gap 是否有inf:", np.any(np.isinf(res_stoc["gap"])))
-# print("    STOC-ADMM gap 是否有NaN:", np.any(np.isnan(res_stoc["gap"])))
+res_stoc  = stochastic_admm(
+    A, b, D, max_iter, p_star,
+    mu=stoc_mu, lam=stoc_lam, rho=stoc_rho, step_size=stoc_step_size, batch_size=stoc_batch_size
+)
 results.append(res_stoc)
 
 # 2. SAG-ADMM
@@ -140,9 +115,16 @@ res_sag = sag_admm(
 # print("    SAG-ADMM gap 是否有NaN:", np.any(np.isnan(res_sag["gap"])))
 results.append(res_sag)
 
+res_saga = saga_admm(
+    A, b, D, max_iter, p_star,
+    mu=saga_mu, lam=saga_lam, rho=saga_rho, step_size=sag_step_size
+)
+results.append(res_saga)
+
 # 3. SVRG-ADMM
 res_svrg = svrg_admm(
-    A, b, D, mu=svrg_mu, lam=svrg_lam, rho=svrg_rho, max_iter=max_iter, step_size=svrg_step_size, p_star=p_star, batch_size=svrg_batch_size)
+    A, b, D, max_iter, p_star,
+    mu=svrg_mu, lam=svrg_lam, rho=svrg_rho, step_size=svrg_step_size, batch_size=svrg_batch_size)
 # print("SVRG-ADMM gap 前10个值:", res_svrg["gap"][:10])
 # print("    SVRG-ADMM gap 是否有inf:", np.any(np.isinf(res_svrg["gap"])))
 # print("    SVRG-ADMM gap 是否有NaN:", np.any(np.isnan(res_svrg["gap"])))
@@ -167,7 +149,7 @@ res_pkm = pkm_admm(
     tau=pkm_tau,
     varrho=pkm_varrho,
     update_prob_p_t=pkm_update_prob,
-    batch_size_b=pkm_batch_size,
+    batch_size=pkm_batch_size,
     p_star=p_star
 )
 # print("PKM-ADMM gap 前10个值:", res_pkm["gap"][:10])

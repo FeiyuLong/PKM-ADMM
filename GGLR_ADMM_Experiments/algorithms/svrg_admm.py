@@ -3,7 +3,9 @@ import time
 from utils.metrics import objective_gap, primal_residual, dual_residual
 from scipy.special import expit  # 导入expit避免数值溢出
 
-def svrg_admm(A, b, D, mu, lam, rho, inner_iter=10, max_iter=500, step_size=0.01, p_star=0.0, batch_size=32):  # 新增batch_size参数，默认32
+def svrg_admm(A, b, D, max_iter=500, p_star=0.0,
+              mu=1e-1, lam=1e-2, rho=0.01,
+              step_size=0.01, batch_size=32, update_freq=10):  # 新增batch_size参数，默认32
     """
     SVRG-ADMM 求解图诱导正则化逻辑回归 (GGLR) 问题
     目标函数：L(x) + (mu/2)||x||² + λ||Dx||₁，其中 L(x) 是逻辑回归损失
@@ -16,7 +18,7 @@ def svrg_admm(A, b, D, mu, lam, rho, inner_iter=10, max_iter=500, step_size=0.01
         mu: L2 正则化系数
         lam: L1 正则化系数 (图引导)
         rho: ADMM 惩罚参数
-        inner_iter: SVRG 全梯度快照更新频率
+        update_freq: SVRG 全梯度快照更新频率
         max_iter: 最大迭代次数
         step_size: x 迭代的步长
         p_star: GGLR问题的真实最优值
@@ -41,33 +43,38 @@ def svrg_admm(A, b, D, mu, lam, rho, inner_iter=10, max_iter=500, step_size=0.01
 
     for k in range(max_iter):
         # ========== SVRG 全梯度快照更新 ==========
-        if k % inner_iter == 0:
+        if k % update_freq == 0:        # k从0开始，因此初始 x_snapshot 和 full_grad 是有值的
             # 逻辑回归损失的全梯度 (均值)，向量操作计算全梯度
             z_full = b[:, None] * A @ x  # (n, 1)
             full_grad = np.mean(-b[:, None] * A * expit(-z_full)[:, None], axis=0)  # (d,)
             x_snapshot = x.copy()  # 保存当前 x 作为快照
 
-        # ========== SVRG 随机梯度方差缩减 ==========
-        # 随机采样batch_size个样本
-        idx = np.random.choice(n, size=batch_size, replace=False)
-        # 当前 x 的随机梯度（batch）
-        z_current = b[idx] * (A[idx] @ x)  # (batch_size,)
-        grad = np.mean(-b[idx, None] * A[idx] * expit(-z_current[:, None]), axis=0)  # (d,)
-        # 快照 x 的随机梯度（batch）
-        z_snap = b[idx] * (A[idx] @ x_snapshot)  # (batch_size,)
-        grad_snap = np.mean(-b[idx, None] * A[idx] * expit(-z_snap[:, None]), axis=0)  # (d,)
-        # SVRG 方差缩减后的梯度 (核心)
-        svrg_grad = grad - grad_snap + full_grad
-
-        # ========== ADMM x 变量更新 (梯度下降) ==========
-        # 增广拉格朗日关于 x 的梯度：SVRG 梯度 + mu*x + rho*D^T(Dx - y + lam_u/rho)
-        x_grad = svrg_grad + mu * x + rho * D.T @ (D @ x - y + lam_u / rho)
-        x = x - step_size * x_grad
+        # ========== mini-batch 采样 ===============
+        indices = np.random.choice(n, size=batch_size, replace=False)
+        A_batch, b_batch = A[indices], b[indices]
 
         # ========== ADMM y (z) 变量更新 (软阈值) ==========
         # 软阈值公式：y = soft_threshold(Dx + lam_u/rho, lam/rho)
         u = D @ x + lam_u / rho
         y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
+
+        # ========== SVRG 随机梯度方差缩减 ==========
+        # 随机采样batch_size个样本
+        idx = np.random.choice(n, size=batch_size, replace=False)
+        # 当前 x 的随机梯度（batch）
+        # z_current = b[idx] * (A_batch @ x)  # (batch_size,)
+        z_current = b_batch * (A_batch @ x)
+        grad = np.mean(-b_batch[:, None] * A_batch * expit(-z_current[:, None]), axis=0)  # (d,)
+        # 快照 x 的随机梯度（batch）
+        z_snap = b[idx] * (A_batch @ x_snapshot)  # (batch_size,)
+        grad_snap = np.mean(-b_batch[:, None] * A_batch * expit(-z_snap[:, None]), axis=0)  # (d,)
+        # SVRG 方差缩减后的梯度 (核心)
+        svrg_grad_est = grad - grad_snap + full_grad
+
+        # ========== ADMM x 变量更新 (梯度下降) ==========
+        # 增广拉格朗日关于 x 的梯度：SVRG 梯度 + mu*x + rho*D^T(Dx - y + lam_u)
+        x_grad = svrg_grad_est + mu * x + rho * D.T @ (D @ x - y + lam_u)
+        x = x - step_size * x_grad
 
         # ========== ADMM 对偶变量 lam_u 更新 ==========
         # 公式：lam_u = lam_u + rho*(Dx - y)

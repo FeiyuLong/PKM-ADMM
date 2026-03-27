@@ -3,50 +3,64 @@ import time
 from utils.metrics import *
 from scipy.special import expit  # 需导入scipy
 
-def stochastic_admm(A, b, D, mu, lam, rho, batch_size=32, max_iter=1000, step_size=0.01, p_star=0.0):  # 新增p_star参数
+def stochastic_admm(A, b, D, max_iter=1000, p_star=0.0,
+                    mu = 1e-3, lam = 1e-2, rho = 1.0,
+                    step_size=0.01, batch_size=32):
     """
-    随机ADMM求解GGLR问题，添加步长参数，修正梯度无偏性
-    :param A: 样本特征矩阵 (n_samples, n_features)
-    :param b: 标签向量 (n_samples,)
-    :param D: 图关联矩阵 (n_edges, n_features)
-    :param mu: L2正则化系数
-    :param lam: L1正则化系数
-    :param rho: ADMM惩罚系数
-    :param batch_size: 随机批次大小
-    :param max_iter: 最大迭代次数
-    :param step_size: 梯度下降步长
-    :param p_star: GGLR问题的真实最优值
-    :return: 收敛指标（gap, primal, dual）
+    随机ADMM（Stochastic ADMM）求解GGLR问题
+    目标函数：L(x) + (mu/2)||x||² + λ||Dx||₁
+    ADMM 拆分：z = Dx，使用缩放对偶变量形式
+
+    参数：
+        A: 特征矩阵 (n_samples, n_features)
+        b: 标签向量 (n_samples,)
+        D: 图关联矩阵 (n_edges, n_features)
+        mu: L2 正则化系数
+        lam: L1 正则化系数 (图引导)
+        rho: ADMM 惩罚参数
+        max_iter: 最大迭代次数
+        step_size: x 迭代的步长（随机梯度下降）
+        batch_size: 随机采样批次大小
+        p_star: GGLR问题的真实最优值
+    返回：
+        收敛指标（目标间隙、原始残差、对偶残差、时间）
     """
     n, d = A.shape
+    n_edges = D.shape[0]
+    batch_size = min(batch_size, n)
+
+    # 初始化变量
     x = np.zeros(d)
-    y = np.zeros(D.shape[0])
-    lam_u = np.zeros(D.shape[0])
+    y = np.zeros(n_edges)
+    lam_u = np.zeros(n_edges)
+
+    # 收敛指标记录
     gaps, primals, duals = [], [], []
+
     # 时间指标记录
     time_list = []  # 记录每轮累计时间
     start_time = time.time()  # 算法启动时间
 
     for k in range(max_iter):
         # 采样mini-batch
-        idx = np.random.choice(n, batch_size, replace=False)
-        A_batch, b_batch = A[idx], b[idx]
+        indices = np.random.choice(n, batch_size, replace=False)
+        A_batch, b_batch = A[indices], b[indices]
 
         # y更新：软阈值操作
         u = D @ x + lam_u
         y = np.sign(u) * np.maximum(np.abs(u) - lam / rho, 0)
 
+        # x更新：随机梯度下降
         # 步骤1：计算中间变量
         z = b_batch * (A_batch @ x)
         # 步骤2：利用expit推导稳定版 1/(1+exp(z)) = 1 - expit(z)
-        term = 1 - expit(z)  # 等价于 1/(1+np.exp(z))，但无溢出
+        term = expit(-z)  # 等价于 1/(1+np.exp(z))，但无溢出
         # 步骤3：计算梯度
         batch_grad = A_batch.T @ (-b_batch * term)
         unbiased_grad = (n / batch_size) * batch_grad  # 无偏缩放
-        grad_f = unbiased_grad + mu * x  # 加上L2正则项梯度
+        stoc_grad_est = unbiased_grad + mu * x  # 加上L2正则项梯度
 
-        # x更新：随机梯度下降（添加步长参数）
-        x = x - step_size * (grad_f + rho * D.T @ (D @ x - y))
+        x = x - step_size * (stoc_grad_est + rho * D.T @ (D @ x - y + lam_u))
 
         # 对偶变量更新
         lam_u_prev = lam_u.copy()
