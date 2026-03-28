@@ -1,68 +1,56 @@
 import numpy as np
 import time
-from utils.metrics import *
 from scipy.special import expit
+from utils.metrics import *
 
 def saga_admm(A, b, D, max_iter=1000, p_star=0.0,
-              mu1 = 1e-3, mu2 = 1e-2, rho = 1.0,
+              mu1=1e-3, mu2=1e-2, rho=1.0,
               step_size=0.01, batch_size=32):
-    """
-    SAGA-ADMM求解GGLR问题，添加步长和batch_size参数
-    :param A: 样本特征矩阵 (n_samples, n_features)
-    :param b: 标签向量 (n_samples,)
-    :param D: 图关联矩阵 (n_edges, n_features)
-    :param mu1: L2正则化系数
-    :param mu2: L1正则化系数
-    :param rho: ADMM惩罚系数
-    :param max_iter: 最大迭代次数
-    :param step_size: 梯度下降步长
-    :param p_star: GGLR问题的真实最优值
-    :param batch_size: 随机采样的批次大小，默认32
-    :return: 收敛指标（gap, primal, dual）
-    """
     n, d = A.shape
-    batch_size = min(batch_size, n)  # 确保batch_size不超过样本数
+    batch_size = min(batch_size, n)
+
     x = np.zeros(d)
     y = np.zeros(D.shape[0])
     lam_u = np.zeros(D.shape[0])
-    grad_table = np.zeros((n, d))  # 存储每个样本的历史梯度
-    # 初始全梯度（向量操作）
-    z_full = b[:, None] * A @ x  # (n, 1)
-    expit_z = expit(-z_full).reshape(-1, 1)  # 果z_full是样本维度 (500,) → 重塑为 (500, 1)
-    avg_grad = np.mean(-b[:, None] * A * expit_z, axis=0)  # (d,)
-    gaps, primals, duals = [], [], []
-    time_list = []
+
+    # ---------------- 修正 1 & 2：正确的初始化 ----------------
+    z_full = b * (A @ x)  # (n,) 修复了维度爆炸 Bug
+    expit_z = expit(-z_full).reshape(-1, 1)  # (n, 1)
+
+    # 严格保持 SAGA 的不变量：让 grad_table 的均值等于 avg_grad
+    grad_table = -b[:, None] * A * expit_z  # (n, d) 存储所有样本的初始梯度
+    avg_grad = np.mean(grad_table, axis=0)  # (d,)
+
+    gaps, primals, duals, time_list = [], [], [], []
     start_time = time.time()
 
     for k in range(max_iter):
-        # 随机采样batch_size个样本
+        # 1. 随机采样
         indices = np.random.choice(n, size=batch_size, replace=False)
 
-        # 批量计算当前梯度，向量操作
+        # 2. 计算当前 batch 真实梯度
         z = b[indices] * (A[indices] @ x)  # (batch_size,)
         current_grad_batch = -b[indices, None] * A[indices] * expit(-z[:, None])  # (batch_size, d)
-        current_grad_mean = np.mean(current_grad_batch, axis=0)  # (d,)
 
-        # SAGA方差缩减梯度计算
+        # 3. 构造 SAGA 无偏估计器 (这部分你的数学推导完全正确！)
         saga_grad_batch = current_grad_batch - grad_table[indices] + avg_grad[None, :]  # (batch_size, d)
         saga_grad_mean = np.mean(saga_grad_batch, axis=0)  # (d,)
 
-        # 更新梯度表和平均梯度
-        for i, idx in enumerate(indices):
-            grad_old = grad_table[idx].copy()
-            grad_new = current_grad_batch[i]  # 直接用batch位置索引，正确对应样本
-            grad_table[idx] = grad_new
-            avg_grad = avg_grad - (grad_old - grad_new) / n  # 数学公式与原代码完全一致
+        # ---------------- 修正 3：向量化更新梯度表 ----------------
+        grad_old_batch = grad_table[indices]
+        grad_table[indices] = current_grad_batch
+        # 批量更新均值: avg_new = avg_old + sum(新梯度 - 老梯度) / n
+        avg_grad = avg_grad + np.sum(current_grad_batch - grad_old_batch, axis=0) / n
 
-        # y更新：软阈值操作
+        # 4. ADMM y 更新
         u = D @ x + lam_u
         y = np.sign(u) * np.maximum(np.abs(u) - mu2 / rho, 0)
 
-        # x更新：SAGA梯度下降
+        # 5. ADMM x 更新 (包含 L2 正则化)
         saga_est = saga_grad_mean + mu1 * x
         x = x - step_size * (saga_est + rho * D.T @ (D @ x - y + lam_u))
 
-        # 对偶变量更新
+        # 6. ADMM 对偶变量更新
         lam_u_prev = lam_u.copy()
         lam_u = lam_u + D @ x - y
 
@@ -74,8 +62,6 @@ def saga_admm(A, b, D, max_iter=1000, p_star=0.0,
         gaps.append(gap)
         primals.append(pr)
         duals.append(dr)
-
-        cum_time = time.time() - start_time
-        time_list.append(cum_time)
+        time_list.append(time.time() - start_time)
 
     return {"gap": gaps, "primal": primals, "dual": duals, "time": time_list}
