@@ -43,11 +43,6 @@ def sag_admm(A, b, D, max_iter=1000, p_star=0.0,
         # 对batch内的梯度取平均，得到当前batch的梯度估计
         grad_batch_mean = np.mean(grad_batch, axis=0)  # (d,)
 
-        # # 批量更新grad_table和avg_grad
-        # for idx in indices:
-        #     avg_grad = avg_grad - grad_table[idx]/n + grad_batch[np.where(idx == idx)[0][0]]/n
-        #     grad_table[idx] = grad_batch[np.where(idx == idx)[0][0]]
-
         # 3. 批量更新grad_table和avg_grad（核心修改部分）
         # 预先建立「样本索引→batch内位置」的映射，避免循环内多次np.where，提升效率
         index_to_pos = {sample_idx: pos for pos, sample_idx in enumerate(indices)}

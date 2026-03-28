@@ -5,7 +5,7 @@ from scipy.special import expit
 
 def saga_admm(A, b, D, max_iter=1000, p_star=0.0,
               mu1 = 1e-3, mu2 = 1e-2, rho = 1.0,
-              step_size=0.01, batch_size=32):  # 新增batch_size参数，默认32
+              step_size=0.01, batch_size=32):
     """
     SAGA-ADMM求解GGLR问题，添加步长和batch_size参数
     :param A: 样本特征矩阵 (n_samples, n_features)
