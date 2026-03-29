@@ -74,11 +74,12 @@ asvrg_gamma = 1.0         # 控制变量
 pkm_mu1 = 1e-3               # 默认：1e-3
 pkm_mu2 = 1e-2              # 默认：1e-2
 pkm_rho = 1.0               # 默认：1.0
-pkm_step_size = 0.02        # 默认：0.01
-pkm_tau = 0.5               # 默认：0.5
-pkm_varrho = 0.3            # 默认：0.3
-pkm_update_prob = 0.1       # 默认：0.1
-pkm_batch_size = 32         # 默认：32
+pkm_step_size = 0.02
+pkm_batch_size = 32
+pkm_gamma = 1.0
+pkm_tau = 0.5
+pkm_varrho = 0.3
+pkm_update_prob = 0.1
 
 
 # ===================== 生成数据 =====================
@@ -112,6 +113,7 @@ print(f"    按顺序依次比较算法："+tmp)
 # 运行算法并检查gap值
 
 # ---- STOC-ADMM ----
+print("    Running STOC-ADMM...")
 res_stoc  = stochastic_admm(
     A, b, D, max_iter, p_star,
     mu1=stoc_mu1, mu2=stoc_mu2, rho=stoc_rho, step_size=stoc_step_size, batch_size=stoc_batch_size
@@ -119,15 +121,14 @@ res_stoc  = stochastic_admm(
 results.append(res_stoc)
 
 # ---- SAG-ADMM ----
+print("    Running SAG-ADMM...")
 res_sag = sag_admm(
     A, b, D, max_iter=max_iter, p_star=p_star,
     mu1=saga_mu1, mu2=saga_mu2, rho=saga_rho, step_size=saga_step_size, batch_size=sag_batch_size)
-# print("SAG-ADMM gap 前10个值:", res_sag["gap"][:10])
-# print("    SAG-ADMM gap 是否有inf:", np.any(np.isinf(res_sag["gap"])))
-# print("    SAG-ADMM gap 是否有NaN:", np.any(np.isnan(res_sag["gap"])))
 results.append(res_sag)
 
 # ---- SAGA-ADMM ----
+print("    Running SAGA-ADMM...")
 res_saga = saga_admm(
     A, b, D, max_iter, p_star,
     mu1=saga_mu1, mu2=saga_mu2, rho=saga_rho, step_size=sag_step_size
@@ -135,23 +136,21 @@ res_saga = saga_admm(
 results.append(res_saga)
 
 # ---- SVRG-ADMM ----
+print("    Running SVRG-ADMM...")
 res_svrg = svrg_admm(
     A, b, D, max_iter, p_star,
     mu1=svrg_mu1, mu2=svrg_mu2, rho=svrg_rho, step_size=svrg_step_size, batch_size=svrg_batch_size)
-# print("SVRG-ADMM gap 前10个值:", res_svrg["gap"][:10])
-# print("    SVRG-ADMM gap 是否有inf:", np.any(np.isinf(res_svrg["gap"])))
-# print("    SVRG-ADMM gap 是否有NaN:", np.any(np.isnan(res_svrg["gap"])))
 results.append(res_svrg)
 
 # ---- SPIDER-ADMM ----
+print("    Running SPIDER-ADMM...")
 res_spider = spider_admm(
     A, b, D, max_iter=max_iter, p_star=p_star,
     mu1=spider_mu1, mu2=spider_mu2, rho=spider_rho, step_size=spider_step_size, batch_size=spider_batch_size)
-# print("SPIDER-ADMM gap 前10个值:", res_spider["gap"][:10])
-# print("    SPIDER-ADMM gap 是否有inf:", np.any(np.isinf(res_spider["gap"])))
-# print("    SPIDER-ADMM gap 是否有NaN:", np.any(np.isnan(res_spider["gap"])))
 results.append(res_spider)
 
+# ---- ASVRG-ADMM ----
+print("    Running ASVRG-ADMM...")
 res_asvrg = asvrg_admm(
     A, b, D, max_iter=max_iter, p_star=p_star,
     mu1=asvrg_mu1, mu2=asvrg_mu2, rho=asvrg_rho,
@@ -161,14 +160,21 @@ res_asvrg = asvrg_admm(
 results.append(res_asvrg)
 
 # ---- PKM-ADMM ----
+print("    Running PKM-ADMM...")
 res_pkm = pkm_admm(
-    A, b, D, max_iter=max_iter, p_star=p_star,
-    mu1=pkm_mu1, mu2=pkm_mu2, rho=pkm_rho, step_size=pkm_step_size, batch_size=pkm_batch_size,
-    tau=pkm_tau, varrho=pkm_varrho, update_prob_p_t=pkm_update_prob
+    A, b, D,
+    max_iter=max_iter,
+    p_star=p_star,
+    mu1=pkm_mu1,
+    mu2=pkm_mu2,
+    rho=pkm_rho,
+    step_size=pkm_step_size,
+    batch_size=pkm_batch_size,
+    gamma=pkm_gamma,
+    tau=pkm_tau,
+    varrho=pkm_varrho,
+    update_prob=pkm_update_prob
 )
-# print("PKM-ADMM gap 前10个值:", res_pkm["gap"][:10])
-# print("    PKM-ADMM gap 是否有inf:", np.any(np.isinf(res_pkm["gap"])))
-# print("    PKM-ADMM gap 是否有NaN:", np.any(np.isnan(res_pkm["gap"])))
 results.append(res_pkm)
 
 
