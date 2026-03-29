@@ -11,6 +11,7 @@ GLOBAL_SETTINGS = {
 
 # ===================== 2. 各算法独立超参数 =====================
 # A, b, D, max_iter, p_star 会在 main.py 中动态注入，这里只写算法特有参数
+# 默认设置：mu1=1e-3, mu2=1e-2, rho=1
 ALGO_PARAMS = {
     "STOC-ADMM": {
         "mu1": 1e-3,
@@ -63,7 +64,7 @@ ALGO_PARAMS = {
         "rho": 1.0,
         "step_size": 0.02,
         "batch_size": 32,
-        "gamma": 1.0,
+        "gamma": 0.8,
         "tau": 0.5,
         "varrho": 0.3,
         "update_prob": 0.1
