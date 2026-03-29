@@ -99,8 +99,8 @@ def compute_gglr_optimal_value(A, b, D, mu, lam):
     # ===================== 内部结果校验 =====================
     if problem.status in [cp.OPTIMAL, cp.OPTIMAL_INACCURATE]:
         p_star = float(problem.value)
-        print(f"    ✅ 求解成功 | GGLR最优目标值 p_star = {p_star:.8f}")
+        print(f"    ✅ 求解成功 | GGLR最优目标值 p_star = {p_star:.8f}\n")
         return p_star
     else:
-        print(f"    ⚠️ 求解状态：{problem.status} | 返回默认值 0.0")
+        print(f"    ⚠️ 求解状态：{problem.status} | 返回默认值 0.0\n")
         return 0.0

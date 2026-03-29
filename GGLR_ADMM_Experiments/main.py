@@ -35,14 +35,14 @@ A, b, _, _ = generate_gglr_data(n_samples, n_features, D)
 # 2. 计算 p_star
 print("=== 开始计算 p_star ===")
 p_star = compute_gglr_optimal_value(A, b, D, GLOBAL_SETTINGS["mu1"], GLOBAL_SETTINGS["mu2"])
-print(f"p_star = {p_star:.8f}\n")
+# print(f"p_star = {p_star:.8f}\n")
 
 # 3. 运行算法
 results = []
 algo_names = list(ALGO_MAP.keys())
 
 for name in algo_names:
-    print(f"--- Running {name} ---")
+    print(f"    --- Running {name} ---")
 
     # 获取该算法专属参数
     params = ALGO_PARAMS[name].copy()
