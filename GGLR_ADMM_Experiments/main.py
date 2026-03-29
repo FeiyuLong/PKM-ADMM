@@ -11,6 +11,7 @@ from algorithms.sag_admm import sag_admm
 from algorithms.saga_admm import saga_admm
 from algorithms.svrg_admm import svrg_admm
 from algorithms.spider_admm import spider_admm
+from algorithms.asvrg_admm import asvrg_admm
 from algorithms.pkm_admm import pkm_admm
 
 
@@ -59,6 +60,16 @@ spider_rho = 1.0            # 默认：1.0
 spider_step_size = 0.02     # 默认：0.01
 spider_batch_size = 1          # SPIDER-ADMM批次大小，默认32
 
+# ASVRG-ADMM 参数
+asvrg_mu1 = 1e-3
+asvrg_mu2 = 1e-2
+asvrg_rho = 1.0
+asvrg_step_size = 0.01
+asvrg_batch_size = 32
+asvrg_inner_iter = 10     # 全梯度快照更新频率
+asvrg_theta = 0.7         # 动量参数
+asvrg_gamma = 1.0         # 控制变量
+
 # PKM-ADMM 参数
 pkm_mu1 = 1e-3               # 默认：1e-3
 pkm_mu2 = 1e-2              # 默认：1e-2
@@ -92,7 +103,7 @@ results = []
 # ======== 比较算法 ========
 algo_names = [
     "STOC-ADMM", "SAG-ADMM", "SAGA-ADMM",
-    "SVRG-ADMM", "SPIDER-ADMM", "PKM-ADMM"
+    "SVRG-ADMM", "SPIDER-ADMM", "ASVRG-ADMM", "PKM-ADMM"
 ]
 
 tmp = ' -> '.join(algo_names)
@@ -140,6 +151,14 @@ res_spider = spider_admm(
 # print("    SPIDER-ADMM gap 是否有inf:", np.any(np.isinf(res_spider["gap"])))
 # print("    SPIDER-ADMM gap 是否有NaN:", np.any(np.isnan(res_spider["gap"])))
 results.append(res_spider)
+
+res_asvrg = asvrg_admm(
+    A, b, D, max_iter=max_iter, p_star=p_star,
+    mu1=asvrg_mu1, mu2=asvrg_mu2, rho=asvrg_rho,
+    step_size=asvrg_step_size, batch_size=asvrg_batch_size,
+    gamma=asvrg_gamma, inner_iter=asvrg_inner_iter, theta=asvrg_theta
+)
+results.append(res_asvrg)
 
 # ---- PKM-ADMM ----
 res_pkm = pkm_admm(
