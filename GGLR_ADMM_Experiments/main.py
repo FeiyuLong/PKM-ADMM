@@ -15,7 +15,7 @@ from algorithms.pkm_admm import pkm_admm
 
 # 算法名称与函数的映射关系
 ALGO_MAP = {
-    "STOC-ADMM": stochastic_admm,
+    # "STOC-ADMM": stochastic_admm,
     "SAG-ADMM": sag_admm,
     "SAGA-ADMM": saga_admm,
     "SVRG-ADMM": svrg_admm,

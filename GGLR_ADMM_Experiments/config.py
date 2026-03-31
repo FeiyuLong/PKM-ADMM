@@ -56,7 +56,7 @@ ALGO_PARAMS = {
         "batch_size": 32,
         "gamma": 1.0,
         "inner_iter": 10,
-        "theta": 0.7
+        "theta": 0.48
     },
     "PKM-ADMM": {
         "mu1": 1e-3,
