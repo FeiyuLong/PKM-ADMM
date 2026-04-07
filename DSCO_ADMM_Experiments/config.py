@@ -30,6 +30,11 @@ DATASET_CONFIGS: dict = {
         "test_path":  "datasets/w8a.t",
         "format":     "libsvm",
     },
+    "ijcnn1": {
+        "train_path": "datasets/ijcnn1.bz2",
+        "test_path": "datasets/ijcnn1.t.bz2",
+        "format": "libsvm_bz2",
+    },
     "gisette": {
         "train_path": "datasets/gisette_scale.bz2",
         "test_path":  "datasets/gisette_scale.t.bz2",
