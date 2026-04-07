@@ -46,7 +46,7 @@ GLOBAL_SETTINGS: dict = {
     "M":        10,
 
     # 最大迭代轮次（1 Epoch = 1 ADMM 迭代）
-    "max_iter": 200,
+    "max_iter": 100,
 
     # L1 稀疏正则系数 μ（对应全局目标中的 μ‖y‖₁ 项）
     "mu":       1e-3,
